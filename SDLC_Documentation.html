@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartVoting System - SDLC Documentation</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 2rem;
+            background-color: #f9f9f9;
+        }
+        h1, h2, h3 {
+            color: #2c3e50;
+            margin-top: 1.5em;
+        }
+        h1 {
+            border-bottom: 2px solid #eaeaea;
+            padding-bottom: 0.5rem;
+            font-size: 2.5rem;
+            text-align: center;
+            color: #1a73e8;
+        }
+        h2 {
+            border-bottom: 1px solid #eaeaea;
+            padding-bottom: 0.3rem;
+            font-size: 1.8rem;
+        }
+        ul {
+            padding-left: 20px;
+        }
+        li {
+            margin-bottom: 0.5rem;
+        }
+        code {
+            background-color: #f1f1f1;
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+            font-size: 0.9em;
+            color: #d63384;
+        }
+        .container {
+            background: white;
+            padding: 3rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        hr {
+            border: 0;
+            height: 1px;
+            background: #eee;
+            margin: 2rem 0;
+        }
+        .section-title {
+            color: #555;
+            font-weight: 300;
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>SmartVoting System<br><span class="section-title">SDLC Documentation</span></h1>
+
+        <h2>1. Project Overview</h2>
+        <p>
+            <strong>Project Name:</strong> SmartVoting<br>
+            <strong>Type:</strong> Secure Web-Based E-Voting System with Biometric Authentication<br>
+            <strong>Description:</strong><br>
+            SmartVoting is a modern, secure, and user-friendly electronic voting platform designed to ensure the integrity of elections through advanced biometric verification. It combines a robust MERN (MongoDB/Postgres, Express, React, Node) stack with a dedicated Python AI Engine for facial recognition and liveness detection.
+        </p>
+
+        <hr>
+
+        <h2>2. Feasibility Study</h2>
+
+        <h3>2.1 Technical Feasibility</h3>
+        <ul>
+            <li><strong>Web Technologies:</strong> React.js for a dynamic UI and Node.js for a scalable backend are industry standards.</li>
+            <li><strong>AI Integration:</strong> Python is the leader in AI/ML. Integrating it via a Flask microservice allows leveraging powerful libraries like <code>MediaPipe</code> and <code>DeepFace</code> without compromising the web app's performance.</li>
+            <li><strong>Database:</strong> Supabase (PostgreSQL) provides reliable relational data storage with real-time capabilities.</li>
+        </ul>
+
+        <h3>2.2 Operational Feasibility</h3>
+        <ul>
+            <li><strong>User Friendly:</strong> The interface is designed for ease of use, with clear instructions for the biometric challenges (Look & Blink).</li>
+            <li><strong>Security:</strong> Biometric verification (Identity + Liveness) drastically reduces the risk of voter fraud compared to traditional password-only systems.</li>
+        </ul>
+
+        <hr>
+
+        <h2>3. Requirements Analysis</h2>
+
+        <h3>3.1 Functional Requirements</h3>
+        <ul>
+            <li><strong>Authentication:</strong> Users and Admins must log in securely.</li>
+            <li><strong>Biometric Verification:</strong>
+                <ul>
+                    <li><strong>Liveness Check:</strong> Ensure the user is present and "live" (not a photo) using blink detection.</li>
+                    <li><strong>Identity Match:</strong> Compare the live Webcam feed against the registered voter's profile photo.</li>
+                </ul>
+            </li>
+            <li><strong>Election Management (Admin):</strong> Create, Update, Delete, and Announce elections.</li>
+            <li><strong>Voting (User):</strong> Browse active elections and cast a secure, tamper-proof vote.</li>
+            <li><strong>Results:</strong> Real-time generation of results with graphical visualization (Bar Charts), visible to voters only after official announcement.</li>
+        </ul>
+
+        <h3>3.2 Non-Functional Requirements</h3>
+        <ul>
+            <li><strong>Performance:</strong> Liveness checks must complete within 2-3 seconds.</li>
+            <li><strong>Reliability:</strong> The system must prevent duplicate votes.</li>
+            <li><strong>Scalability:</strong> The backend structure supports modular services (AI, Auth, Voting).</li>
+            <li><strong>Usability:</strong> The UI must be responsive and accessible.</li>
+        </ul>
+
+        <hr>
+
+        <h2>4. System Design</h2>
+
+        <h3>4.1 Architecture (Microservices/Hybrid)</h3>
+        <p>The system follows a 3-tier architecture:</p>
+        <ol>
+            <li><strong>Frontend (Client):</strong> React.js application. Handles UI, routing, and Webcam image capture.</li>
+            <li><strong>Backend (Server):</strong>
+                <ul>
+                    <li><strong>Main API:</strong> Node.js/Express. Handles business logic, database CRUD, and session management.</li>
+                    <li><strong>AI Engine:</strong> Python/Flask. A dedicated service receiving image frames to perform CPU-intensive biometric analysis.</li>
+                </ul>
+            </li>
+            <li><strong>Database:</strong> Supabase (PostgreSQL) for storing users, elections, votes, and candidates.</li>
+        </ol>
+
+        <h3>4.2 Database Schema (Key Entities)</h3>
+        <ul>
+            <li><strong>Users:</strong> <code>id, name, email, password, role, face_embedding</code></li>
+            <li><strong>Elections:</strong> <code>id, title, code, status (active/closed), is_announced, start_at, end_at</code></li>
+            <li><strong>Candidates:</strong> stored as JSONB within Elections or separate table, containing <code>name, symbolUrl, vote_count</code>.</li>
+            <li><strong>Votes:</strong> <code>id, election_id, voter_id, timestamp</code> (Unique constraint on <code>election_id + voter_id</code> to prevent double voting).</li>
+        </ul>
+
+        <hr>
+
+        <h2>5. Implementation Details</h2>
+
+        <h3>5.1 Tech Stack</h3>
+        <ul>
+            <li><strong>Frontend:</strong> React, <code>react-router-dom</code>, <code>react-webcam</code></li>
+            <li><strong>Backend:</strong> Node.js, Express, <code>multer</code> (file upload)</li>
+            <li><strong>AI Engine:</strong> Python 3.9+, Flask, <code>MediaPipe</code> (Mesh detection), <code>DeepFace</code> (Face Recognition), <code>OpenCV</code></li>
+            <li><strong>Database:</strong> Supabase (Postgres)</li>
+        </ul>
+
+        <h3>5.2 Key Algorithms</h3>
+        <ol>
+            <li><strong>Liveness Detection (Blink):</strong>
+                <ul>
+                    <li>Frontend captures 5 frames.</li>
+                    <li>AI calculates the <strong>Eye Aspect Ratio (EAR)</strong> for each frame.</li>
+                    <li>Logic: If the variance in EAR exceeds a threshold (indicating eye movement/blink), Liveness is <strong>PASSED</strong>.</li>
+                </ul>
+            </li>
+            <li><strong>Identity Verification:</strong>
+                <ul>
+                    <li>Extract Face Embedding (128d vector) from live frame.</li>
+                    <li>Calculate <strong>Cosine Similarity</strong> with the stored User Embedding.</li>
+                    <li>Logic: If distance < 0.45, Identity is <strong>VERIFIED</strong>.</li>
+                </ul>
+            </li>
+        </ol>
+
+        <hr>
+
+        <h2>6. Testing Strategy</h2>
+
+        <h3>6.1 Unit Testing</h3>
+        <ul>
+            <li><strong>Frontend:</strong> Testing individual components (Navbar, ElectionCard) for rendering.</li>
+            <li><strong>Backend:</strong> Testing API endpoints (<code>/login</code>, <code>/vote</code>) with Postman/ThunderClient.</li>
+        </ul>
+
+        <h3>6.2 Integration Testing</h3>
+        <ul>
+            <li><strong>AI-Backend Handshake:</strong> Verifying distinct error codes are propagated (e.g., "Liveness Failed" vs "Identity Mismatch").</li>
+            <li><strong>Voting Flow:</strong> ensuring a vote increments the counter in the DB and updates the UI.</li>
+        </ul>
+
+        <h3>6.3 System Testing</h3>
+        <ul>
+            <li><strong>Full Flow:</strong> Register -> Login -> Verify Face -> Cast Vote -> Admin Announce -> View Results.</li>
+        </ul>
+
+        <hr>
+
+        <h2>7. Deployment</h2>
+        <ul>
+            <li><strong>Current State:</strong> Local Development Environment.</li>
+            <li><strong>Frontend:</strong> Runs on <code>localhost:3000</code> (npm start).</li>
+            <li><strong>Backend:</strong> Runs on <code>localhost:5000</code> (node server.js).</li>
+            <li><strong>AI Engine:</strong> Runs on <code>localhost:5001</code> (python main.py).</li>
+            <li><strong>Future:</strong> Dockerize all 3 services for one-click deployment to cloud platforms (AWS/Heroku).</li>
+        </ul>
+
+        <hr>
+
+        <h2>8. Maintenance & Future Enhancements</h2>
+        <ul>
+            <li><strong>Blockchain Integration:</strong> To make the vote ledger immutable and completely decentralized.</li>
+            <li><strong>Mobile App:</strong> Native mobile application for better camera access.</li>
+            <li><strong>Email Notifications:</strong> Alert users when elections start or results are announced.</li>
+        </ul>
+    </div>
+
+</body>
+</html>
