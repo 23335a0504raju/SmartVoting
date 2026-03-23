@@ -224,10 +224,17 @@ def generate_embedding():
         img = decode_image(image_data)
         
         # DeepFace for Embedding using Facenet
-        embedding_objs = DeepFace.represent(img_path = img, model_name = "Facenet", enforce_detection = False)
+        try:
+            # We MUST enforce detection so it doesn't just embed the background
+            embedding_objs = DeepFace.represent(img_path = img, model_name = "Facenet", enforce_detection = True)
+        except ValueError as ve:
+            return jsonify({"error": "No face detected in the image. Please ensure your face is clearly visible and well-lit."}), 400
         
         if not embedding_objs:
              return jsonify({"error": "Face not detected"}), 400
+             
+        if len(embedding_objs) > 1:
+             return jsonify({"error": "Multiple faces detected. Please ensure only your face is in the frame."}), 400
 
         embedding = embedding_objs[0]["embedding"]
         return jsonify({"embedding": embedding}), 200
@@ -238,19 +245,20 @@ def generate_embedding():
 def get_face_metrics(img):
     """
     Process a single image to get EAR (Eye Aspect Ratio) and validity.
-    Returns: (valid_face, left_ear, right_ear)
+    Returns: (valid_face, left_ear, right_ear, pitch, yaw, roll)
     """
     img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     results = face_mesh.process(img_rgb)
 
     if not results.multi_face_landmarks:
-        return False, 0, 0
+        return False, 0, 0, 0, 0, 0
 
     landmarks = results.multi_face_landmarks[0].landmark
     img_h, img_w, _ = img.shape
     
     left_ear, right_ear = calculate_ear(landmarks, img_w, img_h)
-    return True, left_ear, right_ear
+    pitch, yaw, roll = get_head_pose(img, landmarks)
+    return True, left_ear, right_ear, pitch, yaw, roll
 
 @app.route('/verify-liveness', methods=['POST'])
 def verify_liveness():
@@ -276,11 +284,14 @@ def verify_liveness():
         for idx, img_b64 in enumerate(images):
             try:
                 img = decode_image(img_b64)
-                valid, l_ear, r_ear = get_face_metrics(img)
+                valid, l_ear, r_ear, pitch, yaw, roll = get_face_metrics(img)
                 
                 processed_frames.append({
                     "img": img_b64, # Keep base64 for re-use
                     "ear": (l_ear + r_ear) / 2.0,
+                    "pitch": pitch,
+                    "yaw": yaw,
+                    "roll": roll,
                     "valid": valid
                 })
             except Exception as e:
@@ -304,18 +315,31 @@ def verify_liveness():
         max_ear = max_ear_frame['ear']
         ear_diff = max_ear - min_ear
         
+        pitches = [f['pitch'] for f in valid_frames]
+        yaws = [f['yaw'] for f in valid_frames]
+        pitch_diff = max(pitches) - min(pitches)
+        yaw_diff = max(yaws) - min(yaws)
+        
         print(f"Liveness Analysis: Min EAR: {min_ear:.3f}, Max EAR: {max_ear:.3f}, Diff: {ear_diff:.3f}")
+        print(f"Pose Variance - Pitch Diff: {pitch_diff:.2f}, Yaw Diff: {yaw_diff:.2f}")
 
         liveness_passed = False
         liveness_msg = "OK"
 
         if len(images) > 1:
-            if ear_diff < 0.02: 
+            # 1. Check for valid blink (stricter EAR difference and low minimum)
+            # 2. Check for micro head-movements to prevent static printed photos
+            if ear_diff < 0.08 or min_ear > 0.22: 
                 liveness_passed = False
-                liveness_msg = f"Static Face (Diff: {ear_diff:.3f})"
-            elif max_ear < 0.15:
+                liveness_msg = f"Static Face/No Genuine Blink Detected (Diff: {ear_diff:.3f}, Min EAR: {min_ear:.3f})"
+            elif max_ear < 0.18:
                 liveness_passed = False
-                liveness_msg = f"Eyes not open (Max: {max_ear:.3f})"
+                liveness_msg = f"Eyes not fully open during scan"
+            elif pitch_diff < 1.0 and yaw_diff < 1.0:
+                # A live human has natural 3D micromovements. 
+                # A 2D mobile screen held in hand generates translation noise but almost 0 true 3D pitch/yaw variance.
+                liveness_passed = False
+                liveness_msg = f"Spoofing Detected: Unnatural static 3D pose (Printed Photo/Screen Detected)"
             else:
                 liveness_passed = True
         else:
@@ -329,12 +353,14 @@ def verify_liveness():
         if target_embedding:
             try:
                 # Use max_ear_frame (best open eyes) for recognition
-                # Decode again since we stored base64 (or could optimize)
                 best_img_b64 = max_ear_frame['img'] 
                 best_img = decode_image(best_img_b64)
 
-                live_objs = DeepFace.represent(img_path = best_img, model_name = "Facenet", enforce_detection = False)
-                
+                try:
+                    live_objs = DeepFace.represent(img_path = best_img, model_name = "Facenet", enforce_detection = True)
+                except ValueError:
+                    live_objs = None
+
                 if live_objs:
                     live_embedding = live_objs[0]["embedding"]
                     
@@ -350,7 +376,7 @@ def verify_liveness():
                     
                     print(f"Identity Check: Distance={cosine_distance:.4f} (Threshold: 0.45)")
 
-                    # Relaxed Threshold
+                    # Strict Threshold + Checked alignment
                     if cosine_distance < 0.45:
                         identity_passed = True
                         identity_msg = "Match Found"
@@ -358,7 +384,7 @@ def verify_liveness():
                         identity_passed = False
                         identity_msg = f"Mismatch ({cosine_distance:.2f})"
                 else:
-                    identity_msg = "Face extraction failed"
+                    identity_msg = "No distinct face detected for identity matching"
             except Exception as e:
                 print(f"Identity Check Error: {e}")
                 identity_msg = "Error during matching"

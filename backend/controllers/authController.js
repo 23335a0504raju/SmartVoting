@@ -85,7 +85,28 @@ exports.registerVoter = async (req, res) => {
 
         if (error) throw error;
 
-        res.status(201).json({ message: 'Voter registered successfully', voterId: voter_id });
+        // Generate Token
+        const token = jwt.sign({ id: data[0].id, role: 'voter' }, JWT_SECRET, { expiresIn: '1d' });
+
+        res.status(201).json({ 
+            message: 'Voter registered successfully', 
+            voterId: voter_id,
+            token,
+            user: {
+                id: data[0].id,
+                name: data[0].full_name,
+                voter_id: data[0].voter_id,
+                pin_number: data[0].pin_number,
+                email: data[0].email,
+                phone: data[0].phone,
+                role: 'voter',
+                has_voted: data[0].has_voted,
+                gender: data[0].gender,
+                class: data[0].class,
+                dob: data[0].dob,
+                branch: data[0].branch
+            }
+        });
 
     } catch (error) {
         console.error('Registration Error:', error);

@@ -18,8 +18,8 @@ const LivenessChallenge = ({ onVerify, onCancel, user }) => {
         setErrorMessage('');
 
         const frames = [];
-        const TOTAL_FRAMES = 5; // Capture 5 frames to ensure we catch a blink
-        const INTERVAL_MS = 300; // 300ms gap -> 1.5s total scan time
+        const TOTAL_FRAMES = 10; // Capture 10 frames to ensure we catch a blink (1.5s total gap)
+        const INTERVAL_MS = 150; // 150ms gap
 
         try {
             // Helper to capture one frame

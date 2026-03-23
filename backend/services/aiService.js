@@ -14,8 +14,11 @@ exports.generateEmbedding = async (base64Image) => {
         });
         return response.data.embedding;
     } catch (error) {
-        console.error('AI Service Error (Generate):', error.response ? error.response.data : error.message);
-        throw new Error('Failed to process face image');
+        const aiErrorMsg = error.response && error.response.data && error.response.data.error 
+            ? error.response.data.error 
+            : error.message;
+        console.error('AI Service Error (Generate):', aiErrorMsg);
+        throw new Error(aiErrorMsg || 'Failed to process face image');
     }
 };
 

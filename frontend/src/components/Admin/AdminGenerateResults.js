@@ -10,6 +10,7 @@ const AdminGenerateResults = ({ elections, onNavigate, initialElection }) => {
   const [selectedElection, setSelectedElection] = useState(null);
   const [showResults, setShowResults] = useState(false);
   const [announcing, setAnnouncing] = useState(false);
+  const [notifiedVoters, setNotifiedVoters] = useState([]);
 
   useEffect(() => {
     if (initialElection) {
@@ -58,6 +59,7 @@ const AdminGenerateResults = ({ elections, onNavigate, initialElection }) => {
       });
 
       if (response.ok) {
+        const result = await response.json();
         alert("Results Announced Successfully! Voters can now see the results.");
         // Update local state: closed status and tag
         setSelectedElection({
@@ -65,6 +67,10 @@ const AdminGenerateResults = ({ elections, onNavigate, initialElection }) => {
           status: 'closed',
           description: `[ANNOUNCED] ${selectedElection.description || ''}`
         });
+
+        if (result.notifiedVoters && result.notifiedVoters.length > 0) {
+            setNotifiedVoters(result.notifiedVoters);
+        }
       } else {
         alert("Failed to announce results.");
       }
@@ -214,6 +220,22 @@ const AdminGenerateResults = ({ elections, onNavigate, initialElection }) => {
               Dashboard
             </button>
           </div>
+
+          {notifiedVoters && notifiedVoters.length > 0 && (
+            <div style={{ marginTop: '2rem', padding: '1.5rem', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0', width: '100%', maxWidth: '600px', margin: '2rem auto' }}>
+              <h4 style={{ color: '#0f172a', marginBottom: '1rem', textAlign: 'center' }}>📧 Email Notifications Successfully Sent To:</h4>
+              <ul style={{ listStyleType: 'none', padding: 0, margin: 0, display: 'grid', gap: '0.5rem' }}>
+                {notifiedVoters.map((voter, index) => (
+                  <li key={index} style={{ padding: '0.75rem', background: 'white', borderRadius: '6px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <strong style={{ color: '#1e293b' }}>{voter.full_name}</strong>
+                    <span style={{ color: '#64748b', fontSize: '0.9rem' }}>{voter.email}</span>
+                  </li>
+                ))}
+              </ul>
+              <p style={{ textAlign: 'center', marginTop: '1rem', fontSize: '0.85rem', color: '#10b981', fontWeight: 'bold' }}>All listed voters successfully received their personalized result packets.</p>
+            </div>
+          )}
+
         </div>
       )}
     </div>

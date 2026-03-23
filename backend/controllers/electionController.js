@@ -1,14 +1,43 @@
 const supabase = require('../config/supabase');
+const nodemailer = require('nodemailer');
 
 exports.getAllElections = async (req, res) => {
     try {
-        const { data, error } = await supabase
+        const { data: elections, error } = await supabase
             .from('elections')
             .select('*')
             .order('created_at', { ascending: false });
 
         if (error) throw error;
-        res.json(data);
+
+        // Fetch all votes to dynamically recount real-time values
+        const { data: votes, error: votesError } = await supabase
+            .from('votes')
+            .select('election_id, candidate_id');
+
+        if (!votesError && votes) {
+            // Group votes by election and candidate
+            const voteCounts = {};
+            votes.forEach(v => {
+                if (!voteCounts[v.election_id]) voteCounts[v.election_id] = {};
+                voteCounts[v.election_id][v.candidate_id] = (voteCounts[v.election_id][v.candidate_id] || 0) + 1;
+            });
+
+            // Override cached candidate votes with absolute truth table
+            const recalculatedElections = elections.map(election => {
+                if (election.candidates) {
+                    election.candidates = election.candidates.map(c => ({
+                        ...c,
+                        votes: (voteCounts[election.id] && (voteCounts[election.id][c.id] || voteCounts[election.id][c.name])) || 0
+                    }));
+                }
+                return election;
+            });
+
+            return res.json(recalculatedElections);
+        }
+
+        res.json(elections);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -218,14 +247,35 @@ exports.updateElection = async (req, res) => {
 exports.getElectionById = async (req, res) => {
     try {
         const { id } = req.params;
-        const { data, error } = await supabase
+        const { data: election, error } = await supabase
             .from('elections')
             .select('*')
             .eq('id', id)
             .single();
 
         if (error) throw error;
-        res.json(data);
+
+        // Dynamically recount from absolute truth
+        const { data: votes, error: votesError } = await supabase
+            .from('votes')
+            .select('candidate_id')
+            .eq('election_id', id);
+
+        if (!votesError && votes) {
+            const voteCounts = {};
+            votes.forEach(v => {
+                voteCounts[v.candidate_id] = (voteCounts[v.candidate_id] || 0) + 1;
+            });
+
+            if (election.candidates) {
+                election.candidates = election.candidates.map(c => ({
+                    ...c,
+                    votes: voteCounts[c.id] || voteCounts[c.name] || 0
+                }));
+            }
+        }
+
+        res.json(election);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -389,10 +439,10 @@ exports.announceResults = async (req, res) => {
     try {
         const { id } = req.params;
 
-        // 1. Fetch current description to append tag
+        // 1. Fetch current description, title, and candidates to build results
         const { data: currentData, error: fetchError } = await supabase
             .from('elections')
-            .select('description')
+            .select('title, description, candidates')
             .eq('id', id)
             .single();
 
@@ -415,9 +465,144 @@ exports.announceResults = async (req, res) => {
             .select();
 
         if (error) throw error;
-        res.json(data[0]);
+        
+        let sentVoters = [];
+
+        // Fetch voters to return their details to the frontend
+        try {
+            const { data: votesData, error: votesError } = await supabase
+                .from('votes')
+                .select('voter_id')
+                .eq('election_id', id);
+
+            if (!votesError && votesData && votesData.length > 0) {
+                const voterIds = votesData.map(v => v.voter_id);
+                
+                const { data: votersData, error: votersError } = await supabase
+                    .from('voters')
+                    .select('email, full_name')
+                    .in('id', voterIds);
+
+                if (!votersError && votersData) {
+                    sentVoters = votersData;
+                }
+            }
+        } catch (dbErr) {
+            console.error("Failed to fetch notified voters metadata:", dbErr);
+        }
+
+        // 3. Immediately respond to client with updated election and voter mapping
+        res.json({ election: data[0], notifiedVoters: sentVoters });
+
+        // 4. Asynchronously orchestrate Email Notifications
+        (async () => {
+            try {
+                if (sentVoters.length === 0) return;
+
+                // Format results HTML
+                let candidatesList = currentData.candidates || [];
+                let resultsHtml = `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
+                    <h2 style="color: #2563eb; text-align: center;">Results for ${currentData.title}</h2>
+                    <p style="font-size: 16px; color: #333;">The election has concluded and the results have been successfully tabulated.</p>
+                    <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
+                        <thead>
+                            <tr style="background-color: #f8fafc; text-align: left;">
+                                <th style="padding: 12px; border-bottom: 2px solid #e5e7eb;">Candidate</th>
+                                <th style="padding: 12px; border-bottom: 2px solid #e5e7eb;">Votes</th>
+                            </tr>
+                        </thead>
+                        <tbody>`;
+                
+                // Sort candidates by highest votes
+                candidatesList.sort((a, b) => (b.votes || 0) - (a.votes || 0));
+
+                candidatesList.forEach(c => {
+                    resultsHtml += `
+                        <tr>
+                            <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;"><strong>${c.name}</strong></td>
+                            <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">${c.votes || 0}</td>
+                        </tr>`;
+                });
+
+                resultsHtml += `
+                        </tbody>
+                    </table>
+                    <div style="margin-top: 30px; text-align: center; color: #4b5563;">
+                        <p style="font-size: 16px;"><strong>Thank you for participating!</strong></p>
+                        <p style="font-size: 14px;">Your vote is very valued in shaping our community.</p>
+                    </div>
+                </div>`;
+
+                // Configure Nodemailer with Google SMTP credentials
+                const transporter = nodemailer.createTransport({
+                    service: 'gmail',
+                    auth: {
+                        user: process.env.EMAIL_USER,
+                        pass: process.env.EMAIL_PASS
+                    }
+                });
+
+                // Dispatch emails
+                for (const voter of sentVoters) {
+                    if (voter.email && voter.email.includes('@')) {
+                        const mailOptions = {
+                            from: `"SmartBallot" <${process.env.EMAIL_USER}>`,
+                            to: voter.email,
+                            subject: `🗳️ Election Results Announced: ${currentData.title}`,
+                            html: `<p style="font-size: 16px;">Dear ${voter.full_name},</p>${resultsHtml}`
+                        };
+                        try {
+                            await transporter.sendMail(mailOptions);
+                            console.log(`Successfully sent result email to ${voter.email}`);
+                            
+                            // Log success to Database
+                            await supabase.from('email_history').insert([{
+                                election_id: id,
+                                election_title: currentData.title,
+                                voter_email: voter.email,
+                                voter_name: voter.full_name,
+                                status: 'sent'
+                            }]);
+                            
+                        } catch (err) {
+                            console.error(`Failed to send email to ${voter.email}:`, err.message);
+                            
+                            // Log failure to Database
+                            await supabase.from('email_history').insert([{
+                                election_id: id,
+                                election_title: currentData.title,
+                                voter_email: voter.email,
+                                voter_name: voter.full_name,
+                                status: 'failed'
+                            }]);
+                        }
+                    }
+                }
+            } catch (asyncErr) {
+                console.error("Background Email Process Error:", asyncErr);
+            }
+        })();
+
     } catch (error) {
         console.error("Announce Results Error:", error);
+        res.status(500).json({ error: error.message });
+    }
+};
+
+exports.getEmailHistory = async (req, res) => {
+    try {
+        const { data, error } = await supabase
+            .from('email_history')
+            .select('*')
+            .order('sent_at', { ascending: false });
+
+        if (error) {
+            console.error("Supabase API fetch error:", error);
+            throw error;
+        }
+        res.json(data || []);
+    } catch (error) {
+        console.error("Fetch Email History Error:", error);
         res.status(500).json({ error: error.message });
     }
 };

@@ -21,7 +21,7 @@ const Navbar = ({ user, onLogout, onToggleSidebar, currentView, onNavigate }) =>
           }}>
             🗳️
           </div>
-          <h1 className="navbar-title">SmartVoting</h1>
+          <h1 className="navbar-title">SmartBallot</h1>
         </div>
       </div>
 
@@ -47,6 +47,18 @@ const Navbar = ({ user, onLogout, onToggleSidebar, currentView, onNavigate }) =>
                   onClick={() => onNavigate('adminProfile')}
                 >
                   Admin Profile
+                </button>
+                <button
+                  className={`nav-link-item ${currentView === 'adminAIAnalytics' ? 'active' : ''}`}
+                  onClick={() => onNavigate('adminAIAnalytics')}
+                >
+                  AI Analytics
+                </button>
+                <button
+                  className={`nav-link-item ${currentView === 'adminEmailHistory' ? 'active' : ''}`}
+                  onClick={() => onNavigate('adminEmailHistory')}
+                >
+                  Email History
                 </button>
               </>
             ) : (

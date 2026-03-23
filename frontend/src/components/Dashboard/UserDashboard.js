@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 
 const UserDashboard = ({ user, elections, onNavigate }) => {
   const activeElections = elections.filter(election => election.status === 'active');
-  const participatedElections = user.electionsParticipated;
 
   const quickActions = [
     {
@@ -62,28 +61,30 @@ const UserDashboard = ({ user, elections, onNavigate }) => {
         <p className="dashboard-subtitle">Ready to make your voice heard?</p>
       </div>
 
-      <div className="stats-grid">
-        <div className="stat-card">
-          <span className="stat-number">{activeElections.length}</span>
-          <span className="stat-label">Active Elections</span>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem', marginBottom: '3rem' }}>
+        <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '1.5rem', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column' }}>
+          <span style={{ fontSize: '2.5rem', fontWeight: 'bold', color: '#1e293b' }}>{activeElections.length}</span>
+          <span style={{ color: '#64748b', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: '600', marginTop: '0.5rem' }}>Active Elections</span>
         </div>
-        <div className="stat-card">
-          <span className="stat-number">{votingHistory.length || user.electionsParticipated || 0}</span>
-          <span className="stat-label">Elections Participated</span>
+        <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '1.5rem', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column' }}>
+          <span style={{ fontSize: '2.5rem', fontWeight: 'bold', color: '#1e293b' }}>{votingHistory.length || user.electionsParticipated || 0}</span>
+          <span style={{ color: '#64748b', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: '600', marginTop: '0.5rem' }}>Elections Participated</span>
         </div>
-        <div className="stat-card success">
-          <span className="stat-number">Face Recognition</span>
-          <span className="stat-label">Verification Method</span>
+        <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderTop: '6px solid #16a34a', borderRadius: '12px', padding: '1.5rem', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column' }}>
+          <span style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#16a34a', marginBottom: '1rem' }}>Face Recognition</span>
+          <span style={{ color: '#64748b', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: '600', marginTop: 'auto' }}>Verification Method</span>
         </div>
       </div>
 
       {/* Quick Actions */}
-      <div className="quick-actions">
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem', marginBottom: '3rem' }}>
         {quickActions.map((action, index) => (
-          <div key={index} className="action-card" onClick={action.action}>
-            <div className="action-icon">{action.icon}</div>
-            <div className="action-title">{action.title}</div>
-            <div className="action-description">{action.description}</div>
+          <div key={index} onClick={action.action} style={{ background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '12px', padding: '1.5rem', display: 'flex', alignItems: 'flex-start', gap: '1rem', cursor: 'pointer', transition: 'all 0.2s' }} onMouseOver={(e) => { e.currentTarget.style.background = '#f1f5f9'; e.currentTarget.style.borderColor = '#94a3b8'; e.currentTarget.style.transform = 'translateY(-2px)'; }} onMouseOut={(e) => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.transform = 'none'; }}>
+            <div style={{ fontSize: '2rem', background: '#e2e8f0', width: '50px', height: '50px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '12px' }}>{action.icon}</div>
+            <div>
+              <div style={{ fontWeight: '700', fontSize: '1.1rem', color: '#0f172a', marginBottom: '0.25rem' }}>{action.title}</div>
+              <div style={{ fontSize: '0.9rem', color: '#64748b' }}>{action.description}</div>
+            </div>
           </div>
         ))}
       </div>
@@ -97,14 +98,12 @@ const UserDashboard = ({ user, elections, onNavigate }) => {
               .filter(e => (e.status === 'closed' || e.status === 'completed') && e.description && e.description.includes('[ANNOUNCED]'))
               .slice(0, 3)
               .map(election => (
-                <div key={election.id} className="election-item" onClick={() => onNavigate('availableVoting', { election: election })} style={{ cursor: 'pointer', borderLeft: '4px solid #10b981' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div>
-                      <h4>{election.title || election.name}</h4>
-                      <p>Code: {election.code} • Results Available</p>
-                    </div>
-                    <span className="election-status" style={{ background: '#d1fae5', color: '#065f46' }}>Results</span>
+                <div key={election.id} onClick={() => onNavigate('availableVoting', { election: election })} style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderLeft: '4px solid #10b981', borderRadius: '8px', padding: '1.5rem', marginBottom: '1rem', cursor: 'pointer', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', transition: 'transform 0.2s', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }} onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-2px)'} onMouseOut={(e) => e.currentTarget.style.transform = 'none'}>
+                  <div>
+                    <h4 style={{ margin: '0 0 0.5rem 0', color: '#0f172a', fontSize: '1.1rem' }}>{election.title || election.name}</h4>
+                    <p style={{ margin: 0, color: '#64748b', fontSize: '0.9rem' }}>Code: <span style={{ fontFamily: 'monospace', fontWeight: 'bold' }}>{election.code}</span> • Results Available</p>
                   </div>
+                  <span style={{ background: '#dcfce7', color: '#166534', padding: '0.5rem 1rem', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 'bold' }}>Results Live</span>
                 </div>
               ))}
           </div>
@@ -117,10 +116,12 @@ const UserDashboard = ({ user, elections, onNavigate }) => {
           <h3>Active Elections</h3>
           <div className="election-list">
             {activeElections.slice(0, 3).map(election => (
-              <div key={election.id} className="election-item" onClick={() => onNavigate('voting', { election: election })} style={{ cursor: 'pointer' }}>
-                <h4>{election.title || election.name}</h4>
-                <p>Code: {election.code} • {election.candidates ? election.candidates.length : 0} Candidates</p>
-                <span className="election-status status-active">Active</span>
+              <div key={election.id} onClick={() => onNavigate('voting', { election: election })} style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '1.5rem', marginBottom: '1rem', cursor: 'pointer', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', transition: 'transform 0.2s', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }} onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-2px)'} onMouseOut={(e) => e.currentTarget.style.transform = 'none'}>
+                <div>
+                  <h4 style={{ margin: '0 0 0.5rem 0', color: '#0f172a', fontSize: '1.1rem' }}>{election.title || election.name}</h4>
+                  <p style={{ margin: 0, color: '#64748b', fontSize: '0.9rem' }}>Code: <span style={{ fontFamily: 'monospace', fontWeight: 'bold' }}>{election.code}</span> • {election.candidates ? election.candidates.length : 0} Candidates</p>
+                </div>
+                <span style={{ background: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1', padding: '0.4rem 0.8rem', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 'bold' }}>Active Now</span>
               </div>
             ))}
           </div>

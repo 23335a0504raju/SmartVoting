@@ -28,15 +28,23 @@ const ElectionResults = ({ election, showDownload = true }) => {
 
     if (!election) return null;
 
-    const { winner, runner } = calculateWinner(election.candidates);
+    // Calculate actual total votes (do not force a minimum of 1)
+    const totalVotes = election.candidates.reduce((sum, candidate) => sum + (candidate.votes || 0), 0);
+
+    // If there are 0 total votes across all candidates, don't execute winner logic
+    const { winner, runner } = totalVotes > 0 
+        ? calculateWinner(election.candidates) 
+        : { winner: election.candidates[0] || {}, runner: election.candidates[1] || null };
+    
+    // Maintain 0 graphs accurately
     const graphData = generateBarGraphData(election.candidates);
-    const totalVotes = election.candidates.reduce((sum, candidate) => sum + (candidate.votes || 0), 1);
 
     const BarGraph = ({ data }) => {
+        // Prevent div by zero in bar rendering lengths by setting a dynamic floor of 1 for visual scale only
         const maxVotes = Math.max(...data.map(item => item.votes), 1);
 
         return (
-            <div className="bar-graph-horizontal" ref={graphRef} style={{ padding: '2rem', background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)', borderRadius: '20px', boxShadow: '0 4px 20px rgba(0, 0, 0, 0.05)' }}>
+            <div className="bar-graph-horizontal" ref={graphRef} style={{ padding: '2rem', background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
                 {data.map((item, index) => {
                     const percent = ((item.votes / totalVotes) * 100);
                     const isWinner = item.name === winner.name;
@@ -97,10 +105,10 @@ const ElectionResults = ({ election, showDownload = true }) => {
                                         width: animateBars ? `${(item.votes / maxVotes) * 100}%` : '0%',
                                         height: '100%',
                                         background: isWinner
-                                            ? 'linear-gradient(90deg, #10b981 0%, #34d399 100%)'
+                                            ? '#16a34a'
                                             : isRunner
-                                                ? 'linear-gradient(90deg, #f59e0b 0%, #fbbf24 100%)'
-                                                : 'linear-gradient(90deg, #6366f1 0%, #8b5cf6 100%)',
+                                                ? '#eab308'
+                                                : '#2563eb',
                                         borderRadius: '12px',
                                         transition: `width 1.2s cubic-bezier(0.34, 1.56, 0.64, 1) ${index * 0.15}s`,
                                         position: 'relative',
@@ -140,7 +148,7 @@ const ElectionResults = ({ election, showDownload = true }) => {
                             <div className="bar-value" style={{
                                 width: '100px',
                                 fontWeight: '700',
-                                color: isWinner ? '#059669' : isRunner ? '#f59e0b' : '#1e293b',
+                                color: (isWinner && totalVotes > 0) ? '#059669' : (isRunner && totalVotes > 0) ? '#f59e0b' : '#1e293b',
                                 fontSize: '1.1rem',
                                 textAlign: 'center'
                             }}>
@@ -257,15 +265,17 @@ const ElectionResults = ({ election, showDownload = true }) => {
     const ResultsTable = () => {
         return (
             <div className="results-table-enhanced" style={{
-                background: 'white',
-                borderRadius: '16px',
+                background: '#ffffff',
+                border: '1px solid #e2e8f0',
+                borderRadius: '12px',
                 overflow: 'hidden',
-                boxShadow: '0 4px 20px rgba(0, 0, 0, 0.05)'
+                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)'
             }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead style={{
-                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                        color: 'white'
+                        background: '#f8fafc',
+                        borderBottom: '1px solid #e2e8f0',
+                        color: '#475569'
                     }}>
                         <tr>
                             <th style={{ padding: '1.25rem 1.5rem', textAlign: 'left', fontWeight: '600', fontSize: '0.95rem' }}>Rank</th>
@@ -288,12 +298,12 @@ const ElectionResults = ({ election, showDownload = true }) => {
                                     <tr
                                         key={index}
                                         style={{
-                                            borderBottom: '1px solid #f1f5f9',
+                                            borderBottom: '1px solid #e2e8f0',
                                             background: isWinner
-                                                ? 'rgba(16, 185, 129, 0.05)'
+                                                ? '#f0fdf4'
                                                 : isRunner
-                                                    ? 'rgba(245, 158, 11, 0.05)'
-                                                    : index % 2 === 0 ? '#fafafa' : 'white',
+                                                    ? '#fefce8'
+                                                    : index % 2 === 0 ? '#fafafa' : '#ffffff',
                                             opacity: animateBars ? 1 : 0,
                                             transform: animateBars ? 'translateY(0)' : 'translateY(10px)',
                                             transition: `all 0.4s ease ${index * 0.05}s`
@@ -308,11 +318,11 @@ const ElectionResults = ({ election, showDownload = true }) => {
                                                 height: '32px',
                                                 borderRadius: '8px',
                                                 background: isWinner
-                                                    ? 'linear-gradient(135deg, #10b981 0%, #34d399 100%)'
+                                                    ? '#16a34a'
                                                     : isRunner
-                                                        ? 'linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%)'
-                                                        : '#e2e8f0',
-                                                color: isWinner || isRunner ? 'white' : '#64748b',
+                                                        ? '#eab308'
+                                                        : '#cbd5e1',
+                                                color: isWinner || isRunner ? 'white' : '#475569',
                                                 fontWeight: 'bold'
                                             }}>
                                                 {index + 1}
@@ -353,10 +363,10 @@ const ElectionResults = ({ election, showDownload = true }) => {
                                                     width: animateBars ? `${percent}%` : '0%',
                                                     height: '100%',
                                                     background: isWinner
-                                                        ? 'linear-gradient(90deg, #10b981 0%, #34d399 100%)'
+                                                        ? '#16a34a'
                                                         : isRunner
-                                                            ? 'linear-gradient(90deg, #f59e0b 0%, #fbbf24 100%)'
-                                                            : 'linear-gradient(90deg, #6366f1 0%, #8b5cf6 100%)',
+                                                            ? '#eab308'
+                                                            : '#2563eb',
                                                     borderRadius: '4px',
                                                     transition: `width 1s ease ${index * 0.1}s`
                                                 }}></div>
@@ -414,10 +424,13 @@ const ElectionResults = ({ election, showDownload = true }) => {
                     textAlign: 'center',
                     marginBottom: '3rem',
                     paddingBottom: '2rem',
-                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                    borderRadius: '24px',
+                    background: '#ffffff',
+                    border: '1px solid #e2e8f0',
+                    borderTop: '6px solid #1e293b',
+                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
+                    borderRadius: '12px',
                     padding: '3rem 2rem',
-                    color: 'white',
+                    color: '#0f172a',
                     position: 'relative',
                     overflow: 'hidden'
                 }}>
@@ -425,11 +438,14 @@ const ElectionResults = ({ election, showDownload = true }) => {
                         position: 'absolute',
                         top: '20px',
                         right: '20px',
-                        background: 'rgba(255, 255, 255, 0.1)',
+                        background: '#f8fafc',
+                        border: '1px solid #cbd5e1',
+                        color: '#475569',
                         padding: '0.5rem 1rem',
-                        borderRadius: '20px',
-                        fontSize: '0.9rem',
-                        fontWeight: '500'
+                        borderRadius: '6px',
+                        fontSize: '0.85rem',
+                        fontWeight: '600',
+                        letterSpacing: '0.5px'
                     }}>
                         Election Code: <span style={{ fontFamily: 'monospace', fontWeight: 'bold' }}>{election.code}</span>
                     </div>
@@ -452,18 +468,20 @@ const ElectionResults = ({ election, showDownload = true }) => {
                         transition: 'opacity 0.6s 0.3s'
                     }}>
                         <div style={{ textAlign: 'center' }}>
-                            <div style={{ fontSize: '2.5rem', fontWeight: 'bold' }}>{totalVotes}</div>
-                            <div style={{ fontSize: '0.9rem', opacity: 0.9 }}>Total Votes</div>
+                            <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: '#1e293b' }}>{totalVotes}</div>
+                            <div style={{ fontSize: '0.85rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: '600', marginTop: '0.5rem' }}>Total Votes</div>
                         </div>
                         <div style={{ textAlign: 'center' }}>
-                            <div style={{ fontSize: '2.5rem', fontWeight: 'bold' }}>{election.candidates.length}</div>
-                            <div style={{ fontSize: '0.9rem', opacity: 0.9 }}>Candidates</div>
+                            <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: '#1e293b' }}>{election.candidates.length}</div>
+                            <div style={{ fontSize: '0.85rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: '600', marginTop: '0.5rem' }}>Candidates</div>
                         </div>
                         <div style={{ textAlign: 'center' }}>
-                            <div style={{ fontSize: '2.5rem', fontWeight: 'bold' }}>
+                            <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: '#1e293b' }}>
                                 {totalVotes > 0 ? Math.round((winner.votes || 0) / totalVotes * 100) : 0}%
                             </div>
-                            <div style={{ fontSize: '0.9rem', opacity: 0.9 }}>Winner Share</div>
+                            <div style={{ fontSize: '0.85rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: '600', marginTop: '0.5rem' }}>
+                                {totalVotes > 0 ? 'Winner Share' : 'No Votes Yet'}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -475,106 +493,139 @@ const ElectionResults = ({ election, showDownload = true }) => {
                     gap: '2rem',
                     marginBottom: '3rem'
                 }}>
-                    {/* Winner Card */}
-                    <div className="winner-card" style={{
-                        background: 'linear-gradient(135deg, #10b981 0%, #34d399 100%)',
-                        padding: '2.5rem',
-                        borderRadius: '24px',
-                        color: 'white',
-                        position: 'relative',
-                        overflow: 'hidden',
-                        animation: 'pulse 3s infinite',
-                        transformOrigin: 'center'
-                    }}>
-                        <div style={{
-                            position: 'absolute',
-                            top: '20px',
-                            right: '20px',
-                            fontSize: '3rem',
-                            animation: 'trophySpin 4s linear infinite'
-                        }}>🏆</div>
-
-                        <div style={{ fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '2px', opacity: 0.9, marginBottom: '1rem' }}>
-                            <Trophy size={16} style={{ marginRight: '0.5rem' }} /> Winner
-                        </div>
-
-                        <h2 style={{
-                            fontSize: '2.5rem',
-                            fontWeight: '800',
-                            margin: '0 0 1rem 0',
-                            textShadow: '0 2px 4px rgba(0, 0, 0, 0.2)'
-                        }}>
-                            {winner.name}
-                        </h2>
-
-                        <div style={{ display: 'flex', gap: '2rem', marginTop: '1.5rem' }}>
-                            <div>
-                                <div style={{ fontSize: '2rem', fontWeight: 'bold' }}>{winner.votes || 0}</div>
-                                <div style={{ fontSize: '0.9rem', opacity: 0.9 }}>Votes</div>
-                            </div>
-                            <div>
-                                <div style={{ fontSize: '2rem', fontWeight: 'bold' }}>
-                                    {totalVotes > 0 ? (((winner.votes || 0) / totalVotes) * 100).toFixed(1) : 0}%
-                                </div>
-                                <div style={{ fontSize: '0.9rem', opacity: 0.9 }}>Share</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Runner Card */}
-                    {runner ? (
-                        <div className="runner-card" style={{
-                            background: 'linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%)',
-                            padding: '2rem',
-                            borderRadius: '24px',
-                            color: 'white',
-                            position: 'relative',
-                            overflow: 'hidden'
-                        }}>
-                            <div style={{
-                                position: 'absolute',
-                                top: '20px',
-                                right: '20px',
-                                fontSize: '2rem'
-                            }}>🥈</div>
-
-                            <div style={{ fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '1.5px', opacity: 0.9, marginBottom: '0.75rem' }}>
-                                <Medal size={14} style={{ marginRight: '0.5rem' }} /> Runner Up
-                            </div>
-
-                            <h3 style={{
-                                fontSize: '1.8rem',
-                                fontWeight: '700',
-                                margin: '0 0 0.5rem 0'
+                    {/* Winner & Runner Cards */}
+                    {totalVotes > 0 ? (
+                        <>
+                            {/* Winner Card */}
+                            <div className="winner-card" style={{
+                                background: '#ffffff',
+                                border: '1px solid #e2e8f0',
+                                borderTop: '6px solid #16a34a',
+                                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
+                                padding: '2.5rem',
+                                borderRadius: '12px',
+                                color: '#0f172a',
+                                position: 'relative',
+                                overflow: 'hidden'
                             }}>
-                                {runner.name}
-                            </h3>
-
-                            <div style={{ display: 'flex', gap: '1.5rem', marginTop: '1rem' }}>
-                                <div>
-                                    <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{runner.votes || 0}</div>
-                                    <div style={{ fontSize: '0.8rem', opacity: 0.9 }}>Votes</div>
+                                <div style={{
+                                    position: 'absolute',
+                                    top: '20px',
+                                    right: '20px',
+                                    background: '#dcfce7',
+                                    color: '#166534',
+                                    padding: '0.5rem 1rem',
+                                    borderRadius: '20px',
+                                    fontSize: '0.8rem',
+                                    fontWeight: 'bold',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.5rem'
+                                }}>
+                                    <Trophy size={14} /> CERTIFIED WINNER
                                 </div>
-                                <div>
-                                    <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>
-                                        {totalVotes > 0 ? (((runner.votes || 0) / totalVotes) * 100).toFixed(1) : 0}%
+
+                                <div style={{ fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '1px', color: '#64748b', marginBottom: '0.5rem', marginTop: '1rem' }}>
+                                    Leading Candidate
+                                </div>
+
+                                <h2 style={{
+                                    fontSize: '2.5rem',
+                                    fontWeight: '800',
+                                    margin: '0 0 1.5rem 0',
+                                    color: '#1e293b'
+                                }}>
+                                    {winner.name}
+                                </h2>
+
+                                <div style={{ display: 'flex', gap: '3rem', marginTop: '1.5rem', borderTop: '1px solid #f1f5f9', paddingTop: '1.5rem' }}>
+                                    <div>
+                                        <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#16a34a' }}>{winner.votes || 0}</div>
+                                        <div style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '1px' }}>Total Votes</div>
                                     </div>
-                                    <div style={{ fontSize: '0.8rem', opacity: 0.9 }}>Share</div>
+                                    <div>
+                                        <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#0f172a' }}>
+                                            {totalVotes > 0 ? (((winner.votes || 0) / totalVotes) * 100).toFixed(1) : 0}%
+                                        </div>
+                                        <div style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '1px' }}>Popular Share</div>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+
+                            {/* Runner Card */}
+                            {runner && (
+                                <div className="runner-card" style={{
+                                    background: '#ffffff',
+                                    border: '1px solid #e2e8f0',
+                                    borderTop: '6px solid #eab308',
+                                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
+                                    padding: '2rem',
+                                    borderRadius: '12px',
+                                    color: '#0f172a',
+                                    position: 'relative',
+                                    overflow: 'hidden',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    justifyContent: 'center'
+                                }}>
+                                    <div style={{
+                                        position: 'absolute',
+                                        top: '20px',
+                                        right: '20px',
+                                        background: '#fef3c7',
+                                        color: '#b45309',
+                                        padding: '0.4rem 0.8rem',
+                                        borderRadius: '20px',
+                                        fontSize: '0.75rem',
+                                        fontWeight: 'bold',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '0.4rem'
+                                    }}>
+                                        <Medal size={12} /> RUNNER UP
+                                    </div>
+
+                                    <h3 style={{
+                                        fontSize: '1.8rem',
+                                        fontWeight: '700',
+                                        margin: '2rem 0 1.5rem 0',
+                                        color: '#1e293b'
+                                    }}>
+                                        {runner.name}
+                                    </h3>
+
+                                    <div style={{ display: 'flex', gap: '2rem', borderTop: '1px solid #f1f5f9', paddingTop: '1.5rem' }}>
+                                        <div>
+                                            <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#eab308' }}>{runner.votes || 0}</div>
+                                            <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '1px' }}>Total Votes</div>
+                                        </div>
+                                        <div>
+                                            <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#0f172a' }}>
+                                                {totalVotes > 0 ? (((runner.votes || 0) / totalVotes) * 100).toFixed(1) : 0}%
+                                            </div>
+                                            <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '1px' }}>Popular Share</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </>
                     ) : (
                         <div style={{
-                            background: 'linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%)',
-                            borderRadius: '24px',
+                            gridColumn: '1 / -1',
+                            background: '#ffffff',
+                            border: '1px dashed #cbd5e1',
+                            borderRadius: '12px',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            padding: '2rem'
+                            padding: '4rem 2rem'
                         }}>
-                            <div style={{ textAlign: 'center', color: '#64748b' }}>
-                                <Users size={48} style={{ marginBottom: '1rem', opacity: 0.5 }} />
-                                <p style={{ fontWeight: '500' }}>Uncontested Election</p>
+                            <div style={{ textAlign: 'center', color: '#94a3b8' }}>
+                                <Users size={64} style={{ margin: '0 auto 1.5rem auto', opacity: 0.5, display: 'block' }} />
+                                <h3 style={{ margin: '0 0 0.5rem 0', color: '#64748b', fontSize: '1.5rem' }}>Awaiting First Vote</h3>
+                                <p style={{ fontWeight: '500', fontSize: '0.95rem' }}>
+                                    Live tracking will begin once ballots are cast.
+                                </p>
                             </div>
                         </div>
                     )}
@@ -594,9 +645,9 @@ const ElectionResults = ({ election, showDownload = true }) => {
                         onClick={() => setViewMode('graph')}
                         style={{
                             padding: '0.75rem 1.5rem',
-                            background: viewMode === 'graph' ? 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)' : '#e2e8f0',
-                            color: viewMode === 'graph' ? 'white' : '#64748b',
-                            border: 'none',
+                            background: viewMode === 'graph' ? '#1e293b' : '#ffffff',
+                            color: viewMode === 'graph' ? '#ffffff' : '#64748b',
+                            border: viewMode === 'graph' ? '1px solid #1e293b' : '1px solid #cbd5e1',
                             borderRadius: '8px',
                             fontWeight: '600',
                             cursor: 'pointer',
@@ -612,9 +663,9 @@ const ElectionResults = ({ election, showDownload = true }) => {
                         onClick={() => setViewMode('pie')}
                         style={{
                             padding: '0.75rem 1.5rem',
-                            background: viewMode === 'pie' ? 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)' : '#e2e8f0',
-                            color: viewMode === 'pie' ? 'white' : '#64748b',
-                            border: 'none',
+                            background: viewMode === 'pie' ? '#1e293b' : '#ffffff',
+                            color: viewMode === 'pie' ? '#ffffff' : '#64748b',
+                            border: viewMode === 'pie' ? '1px solid #1e293b' : '1px solid #cbd5e1',
                             borderRadius: '8px',
                             fontWeight: '600',
                             cursor: 'pointer',
@@ -630,9 +681,9 @@ const ElectionResults = ({ election, showDownload = true }) => {
                         onClick={() => setViewMode('table')}
                         style={{
                             padding: '0.75rem 1.5rem',
-                            background: viewMode === 'table' ? 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)' : '#e2e8f0',
-                            color: viewMode === 'table' ? 'white' : '#64748b',
-                            border: 'none',
+                            background: viewMode === 'table' ? '#1e293b' : '#ffffff',
+                            color: viewMode === 'table' ? '#ffffff' : '#64748b',
+                            border: viewMode === 'table' ? '1px solid #1e293b' : '1px solid #cbd5e1',
                             borderRadius: '8px',
                             fontWeight: '600',
                             cursor: 'pointer',
@@ -680,7 +731,7 @@ const ElectionResults = ({ election, showDownload = true }) => {
                             onClick={() => window.print()}
                             style={{
                                 padding: '1rem 2rem',
-                                background: 'linear-gradient(135deg, #10b981 0%, #34d399 100%)',
+                                background: '#1e293b',
                                 color: 'white',
                                 border: 'none',
                                 borderRadius: '12px',
@@ -691,7 +742,7 @@ const ElectionResults = ({ election, showDownload = true }) => {
                                 gap: '0.75rem',
                                 fontSize: '1rem',
                                 transition: 'all 0.3s ease',
-                                boxShadow: '0 4px 15px rgba(16, 185, 129, 0.2)'
+                                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
                             }}
                         >
                             <Printer size={20} /> Print Official Report
@@ -766,43 +817,46 @@ const ElectionResults = ({ election, showDownload = true }) => {
                     borderTop: '1px solid #e2e8f0'
                 }}>
                     <div style={{
-                        background: '#f0f9ff',
+                        background: '#ffffff',
+                        border: '1px solid #e2e8f0',
                         padding: '1.5rem',
                         borderRadius: '12px',
                         textAlign: 'center'
                     }}>
-                        <div style={{ fontSize: '1.2rem', fontWeight: '600', color: '#0369a1' }}>
+                        <div style={{ fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: '600', color: '#64748b' }}>
                             Voting Margin
                         </div>
-                        <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#0284c7', marginTop: '0.5rem' }}>
+                        <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#1e293b', marginTop: '0.5rem' }}>
                             {winner.votes - (runner?.votes || 0)} votes
                         </div>
                     </div>
 
                     <div style={{
-                        background: '#fef7ff',
+                        background: '#ffffff',
+                        border: '1px solid #e2e8f0',
                         padding: '1.5rem',
                         borderRadius: '12px',
                         textAlign: 'center'
                     }}>
-                        <div style={{ fontSize: '1.2rem', fontWeight: '600', color: '#86198f' }}>
+                        <div style={{ fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: '600', color: '#64748b' }}>
                             Win Ratio
                         </div>
-                        <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#a855f7', marginTop: '0.5rem' }}>
-                            {((winner.votes / totalVotes) * 100).toFixed(1)}%
+                        <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#1e293b', marginTop: '0.5rem' }}>
+                            {totalVotes > 0 ? ((winner.votes / totalVotes) * 100).toFixed(1) : 0}%
                         </div>
                     </div>
 
                     <div style={{
-                        background: '#f0fdf4',
+                        background: '#ffffff',
+                        border: '1px solid #e2e8f0',
                         padding: '1.5rem',
                         borderRadius: '12px',
                         textAlign: 'center'
                     }}>
-                        <div style={{ fontSize: '1.2rem', fontWeight: '600', color: '#166534' }}>
+                        <div style={{ fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: '600', color: '#64748b' }}>
                             Turnout Efficiency
                         </div>
-                        <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#10b981', marginTop: '0.5rem' }}>
+                        <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#1e293b', marginTop: '0.5rem' }}>
                             {Math.round((totalVotes / 1000) * 100)}%
                         </div>
                     </div>

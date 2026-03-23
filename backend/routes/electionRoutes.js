@@ -11,6 +11,7 @@ const upload = multer({
 
 // Use upload.any() to handle dynamic file fields
 router.post('/', upload.any(), electionController.createElection);
+router.get('/email-history', electionController.getEmailHistory); // Place before /:id
 router.get('/', electionController.getAllElections);
 router.get('/history/:userId', electionController.getVoterHistory); // Place before /:id
 router.get('/:id', electionController.getElectionById);

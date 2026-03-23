@@ -2,6 +2,8 @@ import AdminCreateElection from '../Admin/AdminCreateElection';
 import AdminElectionDetails from '../Admin/AdminElectionDetails';
 import AdminGenerateResults from '../Admin/AdminGenerateResults';
 import AdminProfile from '../Admin/AdminProfile';
+import AdminAIAnalytics from '../Admin/AdminAIAnalytics';
+import AdminEmailHistory from '../Admin/AdminEmailHistory';
 import About from '../Common/About';
 import AdminDashboard from '../Dashboard/AdminDashboard';
 import UserDashboard from '../Dashboard/UserDashboard';
@@ -54,6 +56,10 @@ const Dashboard = ({
         return <AdminProfile user={user} elections={elections} onNavigate={onNavigate} />;
       case 'adminElectionDetails':
         return <AdminElectionDetails election={selectedElection} onNavigate={onNavigate} />;
+      case 'adminAIAnalytics':
+        return <AdminAIAnalytics onNavigate={onNavigate} />;
+      case 'adminEmailHistory':
+        return <AdminEmailHistory onNavigate={onNavigate} />;
       case 'about':
         return <About onNavigate={onNavigate} />;
       default:

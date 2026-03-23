@@ -215,7 +215,7 @@ function App() {
         case 'adminLogin':
           return <AdminLogin onLogin={handleLogin} onNavigate={handleNavigate} />;
         case 'register':
-          return <Register onRegister={handleRegister} onNavigate={handleNavigate} />;
+          return <Register onRegister={handleRegister} onLogin={handleLogin} onNavigate={handleNavigate} />;
         case 'adminSetup':
           return <AdminSetup onNavigate={handleNavigate} />;
         case 'voterProfile':

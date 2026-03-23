@@ -3,7 +3,7 @@ import '../../styles/components.css';
 import Captcha from '../Common/Captcha';
 import FaceCapture from './FaceCapture';
 
-const Register = ({ onRegister, onNavigate }) => {
+const Register = ({ onRegister, onLogin, onNavigate }) => {
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     name: '',
@@ -63,7 +63,13 @@ const Register = ({ onRegister, onNavigate }) => {
 
       // Successfully registered
       alert(`Registration Successful! Your Voter ID is: ${result.voterId}`);
-      onNavigate('login');
+      
+      if (onLogin && result.token && result.user) {
+        sessionStorage.setItem('token', result.token);
+        onLogin(result.user, false);
+      } else {
+        onNavigate('login');
+      }
 
     } catch (err) {
       setError(err.message);
